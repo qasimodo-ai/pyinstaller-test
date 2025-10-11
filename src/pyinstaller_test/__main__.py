@@ -1,4 +1,5 @@
 import asyncio
+import argparse
 import os
 import sys
 import platform
@@ -45,8 +46,71 @@ async def main(chromium_path):
 	)
 	await agent.run()
 
+def health_check():
+	"""Health check to verify bundle integrity"""
+	print("=" * 60)
+	print("Health Check")
+	print("=" * 60)
+
+	# Check Python version
+	print(f"✓ Python version: {sys.version}")
+	print(f"✓ Platform: {platform.system()} {platform.machine()}")
+
+	# Check if frozen (bundled)
+	if getattr(sys, 'frozen', False):
+		print(f"✓ Running as PyInstaller bundle")
+		print(f"  Bundle dir: {sys._MEIPASS}")
+	else:
+		print(f"✓ Running from source")
+
+	# Check module imports
+	try:
+		import browser_use
+		print(f"✓ browser_use imported: {browser_use.__version__}")
+	except Exception as e:
+		print(f"✗ Failed to import browser_use: {e}")
+		return False
+
+	try:
+		import playwright
+		print(f"✓ playwright imported")
+	except Exception as e:
+		print(f"✗ Failed to import playwright: {e}")
+		return False
+
+	# Check Chromium
+	chromium_path = find_bundled_chromium()
+	if chromium_path:
+		chromium_file = Path(chromium_path)
+		if chromium_file.exists():
+			print(f"✓ Chromium found: {chromium_path}")
+			print(f"  Size: {chromium_file.stat().st_size / (1024*1024):.1f} MB")
+		else:
+			print(f"✗ Chromium path exists but file not found: {chromium_path}")
+			return False
+	else:
+		print(f"⚠ Chromium not bundled (checking environment)")
+		env_chromium = os.environ.get("CHROMIUM_PATH")
+		if env_chromium:
+			print(f"  CHROMIUM_PATH: {env_chromium}")
+		else:
+			print(f"  No CHROMIUM_PATH set")
+
+	print("=" * 60)
+	print("✓ Health check passed!")
+	print("=" * 60)
+	return True
+
 def cli():
-	# Try bundled chromium first, then CHROMIUM_PATH
+	parser = argparse.ArgumentParser(description="PyInstaller Test")
+	parser.add_argument("--health", action="store_true", help="Run health check and exit")
+	args = parser.parse_args()
+
+	if args.health:
+		success = health_check()
+		sys.exit(0 if success else 1)
+
+	# Normal execution
 	chromium_path = find_bundled_chromium() or os.environ.get("CHROMIUM_PATH")
 	print(f"Using {chromium_path} as Chromium")
 	asyncio.run(main(chromium_path))
