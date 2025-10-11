@@ -51,6 +51,23 @@ jobs:
       - name: Build executable
         run: uv run build
 
+      # Test executable before packaging
+      - name: Test Windows executable
+        if: runner.os == 'Windows'
+        run: |
+          dist\pyinstaller-test\pyinstaller-test.exe --health
+        shell: pwsh
+
+      - name: Test macOS executable
+        if: runner.os == 'macOS'
+        run: |
+          dist/pyinstaller-test/pyinstaller-test --health
+
+      - name: Test Linux executable
+        if: runner.os == 'Linux'
+        run: |
+          dist/pyinstaller-test/pyinstaller-test --health
+
       # Windows: Create installer with Inno Setup
       - name: Create Windows installer
         if: runner.os == 'Windows'

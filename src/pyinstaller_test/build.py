@@ -29,20 +29,22 @@ def build():
     ]
 
     # Add playwright browsers if they exist
-    # Skip macOS due to code signing issues with Chromium.app
-    if playwright_browsers.exists() and platform.system() != "Darwin":
+    if playwright_browsers.exists():
         chromium_dirs = list(playwright_browsers.glob("chromium-*"))
         if chromium_dirs:
             chromium_dir = chromium_dirs[0]
 
             # Use proper separator for --add-data based on platform
             separator = ";" if platform.system() == "Windows" else ":"
+
+            # On macOS, skip codesigning for Chromium to avoid issues
+            if platform.system() == "Darwin":
+                args.append("--codesign-identity=-")  # Use ad-hoc signing
+
             args.extend([
                 "--add-data", f"{chromium_dir}{separator}ms-playwright/{chromium_dir.name}"
             ])
             print(f"Including Chromium from: {chromium_dir}")
-    elif platform.system() == "Darwin":
-        print("Skipping Chromium bundling on macOS (requires separate installation)")
 
     result = subprocess.run(args)
     sys.exit(result.returncode)
