@@ -14,7 +14,7 @@ PrivilegesRequired=lowest
 UninstallDisplayIcon={app}\qasimodo-agent.exe
 
 [Files]
-Source: "dist\qasimodo-agent\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+Source: "qasimodo-agent\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Qasimodo Agent"; Filename: "{app}\qasimodo-agent.exe"
