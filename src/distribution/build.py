@@ -49,6 +49,8 @@ def build():
         bundle_mode,
         "--collect-all",
         "browser_use",
+        "--collect-all",
+        "playwright",
     ]
 
     # Add playwright browsers if they exist
