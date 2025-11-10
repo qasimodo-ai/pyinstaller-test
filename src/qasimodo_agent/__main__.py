@@ -1,5 +1,6 @@
 import asyncio
 import argparse
+import importlib
 import os
 import sys
 import platform
@@ -103,14 +104,16 @@ def health_check():
 
     # Check module imports
     try:
+        importlib.import_module("browser_use")
         print("[OK] browser_use imported")
-    except Exception as e:
+    except ImportError as e:
         print(f"[FAIL] Failed to import browser_use: {e}")
         return False
 
     try:
+        importlib.import_module("playwright")
         print("[OK] playwright imported")
-    except Exception as e:
+    except ImportError as e:
         print(f"[FAIL] Failed to import playwright: {e}")
         return False
 
