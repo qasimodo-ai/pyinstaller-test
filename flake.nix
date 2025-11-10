@@ -1,5 +1,5 @@
 {
-  description = "Python project with PyInstaller";
+  description = "QAsimodo agent";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -17,7 +17,7 @@
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
             uv
-            python312
+            python313
           ];
         };
       };

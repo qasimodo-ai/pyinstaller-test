@@ -1,7 +1,7 @@
 [project]
 name = "qasimodo-agent"
 dynamic = ["version"]
-description = "Installable agent for QAsimodo"
+description = "QAsimodo agent"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -11,11 +11,11 @@ dependencies = [
 ]
 
 [tool.setuptools.dynamic]
-version = { file = "VERSION.in" }
+version = { file = "VERSION" }
 
 [project.scripts]
 qasimodo-agent = "qasimodo_agent.__main__:cli"
-build = "qasimodo_agent.build:build"
+build = "distribution.build:build"
 
 [tool.uv]
 package = true
