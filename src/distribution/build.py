@@ -10,13 +10,20 @@ from pathlib import Path
 
 
 def get_version():
-    """Read version from VERSION file."""
-    version_file = Path("VERSION")
-    if not version_file.exists():
-        print(f"Warning: {version_file} not found, using default version 1.0.0")
+    """Read version from pyproject.toml."""
+    pyproject_file = Path("pyproject.toml")
+    if not pyproject_file.exists():
+        print(f"Warning: {pyproject_file} not found, using default version 1.0.0")
         return "1.0.0"
-    version = version_file.read_text().strip()
-    return version
+
+    content = pyproject_file.read_text()
+    # Find version line like: version = "0.0.1"
+    match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
+    if match:
+        return match.group(1)
+
+    print("Warning: version not found in pyproject.toml, using default version 1.0.0")
+    return "1.0.0"
 
 
 def build():

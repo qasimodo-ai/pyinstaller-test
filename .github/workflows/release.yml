@@ -1,31 +1,51 @@
 name: Create Release
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build Executables"]
+    types: [completed]
     branches: [master]
-    paths:
-      - 'VERSION'
   workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Read version
+      - name: Read version from pyproject.toml
         id: version
         run: |
-          VERSION=$(cat VERSION | tr -d '[:space:]')
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Check if version in pyproject.toml was modified
+        id: check_version
+        run: |
+          PREV_VERSION=$(git show HEAD~1:pyproject.toml | grep '^version = ' | sed 's/version = "\(.*\)"/\1/' || echo "")
+          CURR_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$PREV_VERSION" != "$CURR_VERSION" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "Version changed from $PREV_VERSION to $CURR_VERSION"
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "Version unchanged ($CURR_VERSION), skipping release"
+          fi
 
       - name: Get short commit hash
+        if: steps.check_version.outputs.version_changed == 'true'
         id: commit
-        run: echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+        run: echo "short_sha=$(echo ${{ github.event.workflow_run.head_sha || github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Check if tag exists
+        if: steps.check_version.outputs.version_changed == 'true'
         id: check_tag
         run: |
           if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.version.outputs.version }}$"; then
@@ -36,25 +56,16 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Wait for build workflow to complete
-        if: steps.check_tag.outputs.exists == 'false'
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.sha }}
-          check-name: 'build'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-
       - name: Download artifacts from build workflow
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_tag.outputs.exists == 'false'
         uses: dawidd6/action-download-artifact@v3
         with:
           workflow: build.yml
-          commit: ${{ github.sha }}
+          commit: ${{ github.event.workflow_run.head_sha || github.sha }}
           path: artifacts
 
       - name: Create and push tag
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_tag.outputs.exists == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -62,11 +73,11 @@ jobs:
           git push origin "v${{ steps.version.outputs.version }}"
 
       - name: Display structure of downloaded files
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_tag.outputs.exists == 'false'
         run: ls -R artifacts
 
       - name: Rename artifacts with version
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_tag.outputs.exists == 'false'
         run: |
           mkdir -p release-artifacts
           cp artifacts/qasimodo-agent-windows-${{ steps.commit.outputs.short_sha }}/qasimodo-agent-setup.exe \
@@ -80,13 +91,14 @@ jobs:
           ls -lh release-artifacts
 
       - name: Create GitHub Release
-        if: steps.check_tag.outputs.exists == 'false'
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
-          draft: false
+          draft: true
           prerelease: false
+          generate_release_notes: true
           files: release-artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

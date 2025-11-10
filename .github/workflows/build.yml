@@ -112,3 +112,11 @@ jobs:
           name: ${{ matrix.artifact_name }}-${{ steps.commit.outputs.short_sha }}
           path: dist/qasimodo-agent-linux.tar.gz
           if-no-files-found: error
+
+  all-builds-complete:
+    name: All builds complete
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success
+        run: echo "All builds completed successfully"
