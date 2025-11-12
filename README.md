@@ -16,7 +16,11 @@ Alternatively, you can download artifacts from the [latest commit](https://githu
 
 ### Docker
 
-TODO
+Pull and run the Docker image:
+```bash
+docker pull ghcr.io/qasimodo-ai/qasimodo-agent:latest
+docker run ghcr.io/qasimodo-ai/qasimodo-agent:latest
+```
 
 ## Usage
 
