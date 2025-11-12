@@ -4,6 +4,7 @@ version = "0.0.1"
 description = "QAsimodo agent"
 readme = "README.md"
 requires-python = ">=3.13"
+license = { text = "AGPL-3.0-or-later" }
 dependencies = [
     "browser-use>=0.8.0",
     "pyinstaller>=6.16.0",
