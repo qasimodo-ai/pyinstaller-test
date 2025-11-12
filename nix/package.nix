@@ -46,6 +46,7 @@
             meta = {
               mainProgram = "qasimodo-agent";
               maintainers = [ lib.maintainers.aciceri ];
+              license = lib.licenses.agpl3Plus;
             };
           });
         };
