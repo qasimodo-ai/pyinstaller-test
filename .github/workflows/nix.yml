@@ -7,6 +7,9 @@ on:
   workflow_dispatch:
 jobs:
   check:
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         include:
@@ -36,3 +39,20 @@ jobs:
         run: nix flake check -L --show-trace --system ${{ matrix.system }}
       - name: Build package
         run: nix build .#packages.${{ matrix.system }}.qasimodo-agent -L --show-trace
+      - name: Log in to GitHub Container Registry
+        if: matrix.system == 'x86_64-linux'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        if: matrix.system == 'x86_64-linux'
+        run: |
+          # TODO: Add version-specific tags (e.g., sha-<commit>, v<version>) in addition to latest
+          nix build .#dockerImage -L --show-trace
+          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/qasimodo-agent:latest"
+          ./result | docker load
+          LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -n 1)
+          docker tag $LOADED_IMAGE $IMAGE_TAG
+          docker push $IMAGE_TAG
