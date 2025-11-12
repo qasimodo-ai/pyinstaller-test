@@ -6,6 +6,11 @@
 
     flake-parts.url = "github:hercules-ci/flake-parts";
 
+    make-shell = {
+      url = "github:nicknovitski/make-shell";
+      inputs.flake-compat.follows = "";
+    };
+
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "";
@@ -19,53 +24,36 @@
         gitignore.follows = "";
       };
     };
+
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    uv2nix = {
+      url = "github:pyproject-nix/uv2nix";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    pyproject-build-systems = {
+      url = "github:pyproject-nix/build-system-pkgs";
+      inputs.pyproject-nix.follows = "pyproject-nix";
+      inputs.uv2nix.follows = "uv2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
-
-      imports = with inputs; [
-        treefmt-nix.flakeModule
-        git-hooks.flakeModule
-      ];
-
-      perSystem =
-        { config, pkgs, ... }:
-        {
-          treefmt = {
-            programs = {
-              nixfmt = {
-                enable = true;
-                width = 120;
-              };
-              nixf-diagnose.enable = true;
-              ruff-format = {
-                enable = true;
-                lineLength = 120;
-              };
-              ruff-check.enable = true;
-              yamlfmt.enable = true;
-            };
-          };
-
-          pre-commit.settings.hooks.treefmt.enable = true;
-
-          devShells.default = pkgs.mkShell {
-            packages = with pkgs; [
-              uv
-              python313
-            ];
-            shellHook = ''
-              ${config.pre-commit.installationScript}
-            '';
-          };
-        };
-    };
+    inputs:
+    inputs.flake-parts.lib.mkFlake { inherit inputs; } (
+      { lib, ... }:
+      {
+        imports = lib.flip lib.pipe [
+          (lib.map builtins.toString)
+          (lib.filter (lib.hasSuffix ".nix"))
+          (lib.filter (f: !lib.hasInfix "/_" f))
+        ] (lib.filesystem.listFilesRecursive ./nix);
+      }
+    );
 }
